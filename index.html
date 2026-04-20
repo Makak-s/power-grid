@@ -9,8 +9,10 @@
         body { background: #0f172a; color: white; font-family: sans-serif; text-align: center; margin: 0; padding: 20px; }
         .stat-card { background: #1e293b; padding: 15px; border-radius: 15px; margin-bottom: 20px; display: flex; justify-content: space-around; }
         #mine-btn { width: 180px; height: 180px; border-radius: 50%; background: radial-gradient(circle, #3b82f6, #1d4ed8); border: 8px solid #1e40af; font-size: 40px; color: white; cursor: pointer; margin: 20px auto; display: flex; align-items: center; justify-content: center; }
-        .upgrade-section { background: #1e293b; padding: 15px; border-radius: 15px; margin-top: 20px; }
-        button.buy { background: #e11d48; border: none; color: white; padding: 10px 20px; border-radius: 8px; cursor: pointer; font-weight: bold; }
+        .upgrade-section { background: #1e293b; padding: 15px; border-radius: 15px; margin-top: 10px; }
+        .btn-action { width: 100%; padding: 12px; border-radius: 10px; border: none; font-weight: bold; cursor: pointer; margin-top: 10px; color: white; }
+        .buy { background: #e11d48; }
+        .invite { background: #8b5cf6; } /* Фиолетовая кнопка для приглашений */
         .energy-bar { width: 100%; height: 10px; background: #334155; border-radius: 5px; margin-top: 10px; }
         #energy-fill { width: 100%; height: 100%; background: #f59e0b; border-radius: 5px; transition: 0.3s; }
     </style>
@@ -28,8 +30,9 @@
     <div class="upgrade-section">
         <h3>🛠 МАГАЗИН</h3>
         <p>Уровень инструментов: <span id="lv">1</span></p>
-        <p style="font-size: 12px; color: #94a3b8;">След. уровень снизит расход энергии</p>
-        <button class="buy" id="buy-upgrade">УЛУЧШИТЬ (50 📜)</button>
+        <button class="btn-action buy" id="buy-upgrade">УЛУЧШИТЬ (50 📜)</button>
+        
+        <button class="btn-action invite" id="invite-btn">📢 ПРИГЛАСИТЬ ДРУГА</button>
     </div>
 
     <script>
@@ -42,11 +45,16 @@
         let level = 1;
         let cost = 50;
 
+        // ВАЖНО: Получаем ID пользователя, чтобы создать ссылку
+        const userId = tg.initDataUnsafe.user ? tg.initDataUnsafe.user.id : 0;
+        const botUsername = "ТВОЙ_НИК_БОТА"; // ЗАМЕНИ НА НИК СВОЕГО БОТА (без @)
+
         const mineBtn = document.getElementById('mine-btn');
         const buyBtn = document.getElementById('buy-upgrade');
+        const inviteBtn = document.getElementById('invite-btn');
 
         mineBtn.onclick = () => {
-            let consumption = 11 - level; // Чем выше уровень, тем меньше тратим (10, 9, 8...)
+            let consumption = 11 - level;
             if (energy >= consumption) {
                 energy -= consumption;
                 blueprints += 1;
@@ -60,11 +68,20 @@
             if (blueprints >= cost) {
                 blueprints -= cost;
                 level++;
-                cost *= 2; // Цена растет
+                cost *= 2;
                 buyBtn.innerText = `УЛУЧШИТЬ (${cost} 📜)`;
                 updateUI();
                 tg.sendData(JSON.stringify({action: "upgrade", new_level: level, cost: cost/2}));
             } else { tg.showAlert("Недостаточно чертежей!"); }
+        };
+
+        // ЛОГИКА ПРИГЛАШЕНИЯ
+        inviteBtn.onclick = () => {
+            const refLink = `https://t.me/${botUsername}?start=${userId}`;
+            const shareText = "Заходи в мою Энергосеть и начни добывать чертежи вместе со мной!";
+            const fullUrl = `https://t.me/share/url?url=${encodeURIComponent(refLink)}&text=${encodeURIComponent(shareText)}`;
+            
+            tg.openTelegramLink(fullUrl); // Открывает окно выбора контакта в Telegram
         };
 
         function updateUI() {
