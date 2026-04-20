@@ -3,148 +3,79 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Энергосеть: Кликер</title>
+    <title>Энергосеть PRO</title>
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <style>
-        body {
-            background-color: #0f172a;
-            color: white;
-            font-family: 'Segoe UI', sans-serif;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            height: 100vh;
-            margin: 0;
-            user-select: none;
-        }
-
-        .stats {
-            display: flex;
-            gap: 15px;
-            margin-bottom: 40px;
-        }
-
-        .stat-item {
-            background: #1e293b;
-            padding: 10px 20px;
-            border-radius: 12px;
-            border: 1px solid #334155;
-            text-align: center;
-            min-width: 90px;
-        }
-
-        .energy-bar {
-            width: 200px;
-            height: 12px;
-            background: #334155;
-            border-radius: 6px;
-            margin-top: 8px;
-            overflow: hidden;
-        }
-
-        .energy-fill {
-            width: 100%;
-            height: 100%;
-            background: linear-gradient(90deg, #f59e0b, #fbbf24);
-            transition: width 0.2s;
-        }
-
-        #mine-button {
-            width: 220px;
-            height: 220px;
-            border-radius: 50%;
-            background: radial-gradient(circle, #3b82f6, #1d4ed8);
-            border: 10px solid #1e40af;
-            box-shadow: 0 0 40px rgba(59, 130, 246, 0.4);
-            cursor: pointer;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 28px;
-            font-weight: bold;
-            transition: transform 0.05s;
-        }
-
-        #mine-button:active {
-            transform: scale(0.92);
-        }
-
-        .hint {
-            margin-top: 30px;
-            color: #64748b;
-            font-size: 14px;
-            text-align: center;
-        }
+        body { background: #0f172a; color: white; font-family: sans-serif; text-align: center; margin: 0; padding: 20px; }
+        .stat-card { background: #1e293b; padding: 15px; border-radius: 15px; margin-bottom: 20px; display: flex; justify-content: space-around; }
+        #mine-btn { width: 180px; height: 180px; border-radius: 50%; background: radial-gradient(circle, #3b82f6, #1d4ed8); border: 8px solid #1e40af; font-size: 40px; color: white; cursor: pointer; margin: 20px auto; display: flex; align-items: center; justify-content: center; }
+        .upgrade-section { background: #1e293b; padding: 15px; border-radius: 15px; margin-top: 20px; }
+        button.buy { background: #e11d48; border: none; color: white; padding: 10px 20px; border-radius: 8px; cursor: pointer; font-weight: bold; }
+        .energy-bar { width: 100%; height: 10px; background: #334155; border-radius: 5px; margin-top: 10px; }
+        #energy-fill { width: 100%; height: 100%; background: #f59e0b; border-radius: 5px; transition: 0.3s; }
     </style>
 </head>
 <body>
 
-    <div class="stats">
-        <div class="stat-item">
-            <div style="font-size: 11px; color: #94a3b8;">📜 ДОБЫТО</div>
-            <div id="blueprints-val" style="font-size: 22px; font-weight: bold;">0</div>
-        </div>
-        <div class="stat-item">
-            <div style="font-size: 11px; color: #94a3b8;">🔋 ЭНЕРГИЯ</div>
-            <div id="energy-text" style="font-size: 14px;">100/100</div>
-            <div class="energy-bar"><div id="energy-fill" class="energy-fill"></div></div>
-        </div>
+    <div class="stat-card">
+        <div>📜 <span id="bps">0</span></div>
+        <div>🔋 <span id="en-txt">100/100</span></div>
     </div>
+    <div class="energy-bar"><div id="energy-fill"></div></div>
 
-    <div id="mine-button">⚡</div>
+    <div id="mine-btn">⚡</div>
 
-    <p class="hint">Кликай, чтобы собирать чертежи.<br>Затем нажми зеленую кнопку внизу!</p>
+    <div class="upgrade-section">
+        <h3>🛠 МАГАЗИН</h3>
+        <p>Уровень инструментов: <span id="lv">1</span></p>
+        <p style="font-size: 12px; color: #94a3b8;">След. уровень снизит расход энергии</p>
+        <button class="buy" id="buy-upgrade">УЛУЧШИТЬ (50 📜)</button>
+    </div>
 
     <script>
         const tg = window.Telegram.WebApp;
         tg.expand();
+        tg.MainButton.setText("СОХРАНИТЬ И ВЫЙТИ").setParams({color: "#22c55e"});
 
         let energy = 100;
-        let blueprints_session = 0; // Сколько накоплено за этот заход
+        let blueprints = 0;
+        let level = 1;
+        let cost = 50;
 
-        const btn = document.getElementById('mine-button');
-        const eFill = document.getElementById('energy-fill');
-        const eText = document.getElementById('energy-text');
-        const bText = document.getElementById('blueprints-val');
+        const mineBtn = document.getElementById('mine-btn');
+        const buyBtn = document.getElementById('buy-upgrade');
 
-        // Настраиваем главную кнопку Telegram (внизу экрана)
-        tg.MainButton.setText("СОХРАНИТЬ И ВЫЙТИ");
-        tg.MainButton.color = "#22c55e"; // Зеленый цвет
-        tg.MainButton.textColor = "#ffffff";
-
-        btn.addEventListener('click', () => {
-            if (energy >= 10) {
-                energy -= 10;
-                blueprints_session += 1;
-
-                // Обновляем текст и полоску на экране
-                eText.innerText = `${energy}/100`;
-                eFill.style.width = `${energy}%`;
-                bText.innerText = blueprints_session;
-
-                // Легкая вибрация
+        mineBtn.onclick = () => {
+            let consumption = 11 - level; // Чем выше уровень, тем меньше тратим (10, 9, 8...)
+            if (energy >= consumption) {
+                energy -= consumption;
+                blueprints += 1;
+                updateUI();
                 tg.HapticFeedback.impactOccurred('medium');
+                tg.MainButton.show();
+            } else { tg.showAlert("Нет энергии!"); }
+        };
 
-                // Показываем кнопку сохранения внизу, как только появился хоть один чертеж
-                if (blueprints_session > 0) {
-                    tg.MainButton.show();
-                }
-            } else {
-                tg.showAlert("Энергия закончилась! Сохрани результат и подожди восстановления.");
-            }
-        });
+        buyBtn.onclick = () => {
+            if (blueprints >= cost) {
+                blueprints -= cost;
+                level++;
+                cost *= 2; // Цена растет
+                buyBtn.innerText = `УЛУЧШИТЬ (${cost} 📜)`;
+                updateUI();
+                tg.sendData(JSON.stringify({action: "upgrade", new_level: level, cost: cost/2}));
+            } else { tg.showAlert("Недостаточно чертежей!"); }
+        };
 
-        // Когда игрок нажимает на зеленую кнопку внизу экрана
+        function updateUI() {
+            document.getElementById('bps').innerText = blueprints;
+            document.getElementById('en-txt').innerText = `${energy}/100`;
+            document.getElementById('energy-fill').style.width = `${energy}%`;
+            document.getElementById('lv').innerText = level;
+        }
+
         tg.MainButton.onClick(() => {
-            const data = {
-                action: "mine",
-                blueprints_earned: blueprints_session,
-                current_energy: energy
-            };
-
-            // Вот теперь мы один раз отправляем данные и закрываемся
-            tg.sendData(JSON.stringify(data));
+            tg.sendData(JSON.stringify({action: "mine", blueprints_earned: blueprints, current_energy: energy}));
             tg.close();
         });
     </script>
