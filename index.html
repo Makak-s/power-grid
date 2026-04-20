@@ -3,77 +3,137 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Энергосеть: Игра</title>
+    <title>Энергосеть</title>
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <style>
         body {
             background-color: #0f172a;
             color: white;
-            font-family: sans-serif;
+            font-family: 'Segoe UI', sans-serif;
             display: flex;
             flex-direction: column;
             align-items: center;
             justify-content: center;
             height: 100vh;
             margin: 0;
+            user-select: none;
+        }
+
+        .stats {
+            display: flex;
+            gap: 15px;
+            margin-bottom: 40px;
+        }
+
+        .stat-item {
+            background: #1e293b;
+            padding: 10px 20px;
+            border-radius: 12px;
+            border: 1px solid #334155;
+            text-align: center;
+            min-width: 80px;
+        }
+
+        .energy-bar {
+            width: 200px;
+            height: 12px;
+            background: #334155;
+            border-radius: 6px;
+            margin-top: 8px;
+            overflow: hidden;
+        }
+
+        .energy-fill {
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, #f59e0b, #fbbf24);
+            transition: width 0.3s;
         }
 
         #mine-button {
-            width: 200px;
-            height: 200px;
+            width: 220px;
+            height: 220px;
             border-radius: 50%;
             background: radial-gradient(circle, #3b82f6, #1d4ed8);
-            border: 8px solid #1e40af;
-            box-shadow: 0 0 30px rgba(59, 130, 246, 0.5);
+            border: 10px solid #1e40af;
+            box-shadow: 0 0 40px rgba(59, 130, 246, 0.4);
             cursor: pointer;
             display: flex;
             align-items: center;
             justify-content: center;
-            font-size: 24px;
+            font-size: 28px;
             font-weight: bold;
-            user-select: none;
+            transition: transform 0.05s;
         }
 
         #mine-button:active {
-            transform: scale(0.95);
+            transform: scale(0.92);
         }
 
-        .info {
-            margin-top: 20px;
-            text-align: center;
-            color: #94a3b8;
+        .hint {
+            margin-top: 30px;
+            color: #64748b;
+            font-size: 14px;
         }
     </style>
 </head>
 <body>
 
+    <div class="stats">
+        <div class="stat-item">
+            <div style="font-size: 12px; color: #94a3b8;">📜 ЧЕРТЕЖИ</div>
+            <div id="blueprints-val" style="font-size: 20px; font-weight: bold;">0</div>
+        </div>
+        <div class="stat-item">
+            <div style="font-size: 12px; color: #94a3b8;">🔋 ЭНЕРГИЯ</div>
+            <div id="energy-text" style="font-size: 14px;">100/100</div>
+            <div class="energy-bar"><div id="energy-fill" class="energy-fill"></div></div>
+        </div>
+    </div>
+
     <div id="mine-button">⚡ ДОБЫТЬ</div>
-    <div class="info">Нажми на кнопку, чтобы отправить<br>чертеж в базу данных</div>
+    
+    <p class="hint">1 клик = 10 энергии</p>
 
     <script>
-        // Инициализируем Telegram WebApp
         const tg = window.Telegram.WebApp;
-        tg.expand(); // Разворачиваем окно
+        tg.expand();
+
+        let energy = 100;
+        let blueprints = 0;
 
         const btn = document.getElementById('mine-button');
+        const eFill = document.getElementById('energy-fill');
+        const eText = document.getElementById('energy-text');
+        const bText = document.getElementById('blueprints-val');
 
         btn.addEventListener('click', () => {
-            // Подготавливаем данные для отправки
-            const data = {
-                action: "mine",
-                blueprints_earned: 1,
-                current_energy: 90 // Для теста передаем фиксированное значение
-            };
+            if (energy >= 10) {
+                energy -= 10;
+                blueprints += 1;
 
-            // Пытаемся отправить данные боту
-            try {
-                // Превращаем объект в строку и отправляем
-                tg.sendData(JSON.stringify(data));
-                
-                // Закрываем приложение (важно для срабатывания sendData)
-                tg.close();
-            } catch (error) {
-                alert("Ошибка: " + error.message);
+                // Обновляем визуал
+                eText.innerText = `${energy}/100`;
+                eFill.style.width = `${energy}%`;
+                bText.innerText = blueprints;
+
+                // Вибрация
+                tg.HapticFeedback.impactOccurred('medium');
+
+                // Отправляем данные боту
+                const data = {
+                    action: "mine",
+                    blueprints_earned: 1,
+                    current_energy: energy
+                };
+
+                // Отправляем и закрываем через маленькую паузу
+                setTimeout(() => {
+                    tg.sendData(JSON.stringify(data));
+                    tg.close();
+                }, 150); 
+            } else {
+                tg.showAlert("Энергия закончилась!");
             }
         });
     </script>
