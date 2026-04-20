@@ -89,32 +89,36 @@
     <div id="mine-button">? ДОБЫТЬ</div>
 
     <script>
-        // Инициализация WebApp
         let tg = window.Telegram.WebApp;
-        tg.expand(); // Развернуть на весь экран
+        tg.expand();
 
         let energy = 100;
         let blueprints = 0;
 
         const btn = document.getElementById('mine-button');
-        const energyFill = document.getElementById('energy-fill');
-        const energyText = document.getElementById('energy-text');
-        const blueprintsText = document.getElementById('blueprints');
-
+        
         btn.addEventListener('click', () => {
             if (energy >= 10) {
                 energy -= 10;
                 blueprints += 1;
                 
-                // Обновляем экран
-                energyText.innerText = `${energy}/100`;
-                energyFill.style.width = `${energy}%`;
-                blueprintsText.innerText = blueprints;
+                document.getElementById('energy-text').innerText = `${energy}/100`;
+                document.getElementById('energy-fill').style.width = `${energy}%`;
+                document.getElementById('blueprints').innerText = blueprints;
 
-                // Вибрация (как в Хамстере)
                 tg.HapticFeedback.impactOccurred('medium');
+
+                // МАГИЯ: Отправляем данные боту
+                // Мы говорим боту: "Юзер добыл 1 чертеж, у него осталось столько-то энергии"
+                let data = {
+                    action: "mine",
+                    blueprints_earned: 1,
+                    current_energy: energy
+                };
+                
+                tg.sendData(JSON.stringify(data)); 
             } else {
-                tg.showAlert("Энергия на нуле!");
+                tg.showAlert("Энергия кончилась!");
             }
         });
     </script>
