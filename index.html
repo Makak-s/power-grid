@@ -6,54 +6,98 @@
     <title>Энергосеть PRO</title>
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <style>
-        body { background: #0f172a; color: white; font-family: sans-serif; text-align: center; margin: 0; padding: 20px; }
-        .stat-card { background: #1e293b; padding: 15px; border-radius: 15px; margin-bottom: 20px; display: flex; justify-content: space-around; }
-        #mine-btn { width: 180px; height: 180px; border-radius: 50%; background: radial-gradient(circle, #3b82f6, #1d4ed8); border: 8px solid #1e40af; font-size: 40px; color: white; cursor: pointer; margin: 20px auto; display: flex; align-items: center; justify-content: center; }
-        .upgrade-section { background: #1e293b; padding: 15px; border-radius: 15px; margin-top: 10px; }
-        .btn-action { width: 100%; padding: 12px; border-radius: 10px; border: none; font-weight: bold; cursor: pointer; margin-top: 10px; color: white; }
-        .buy { background: #e11d48; }
-        .invite { background: #8b5cf6; } /* Фиолетовая кнопка для приглашений */
-        .energy-bar { width: 100%; height: 10px; background: #334155; border-radius: 5px; margin-top: 10px; }
-        #energy-fill { width: 100%; height: 100%; background: #f59e0b; border-radius: 5px; transition: 0.3s; }
+        body { 
+            background: #0f172a; color: white; font-family: sans-serif; 
+            margin: 0; padding: 0; display: flex; flex-direction: column; height: 100vh; overflow: hidden;
+        }
+        
+        /* Шапка со статистикой */
+        .header { background: #1e293b; padding: 15px; display: flex; justify-content: space-around; border-bottom: 1px solid #334155; }
+        
+        /* Контентные области */
+        .tab-content { flex: 1; display: none; flex-direction: column; align-items: center; justify-content: center; padding: 20px; }
+        .active { display: flex; }
+
+        /* Кликер */
+        #mine-btn { 
+            width: 200px; height: 200px; border-radius: 50%; 
+            background: radial-gradient(circle, #3b82f6, #1d4ed8); 
+            border: 8px solid #1e40af; font-size: 50px; color: white; 
+            cursor: pointer; box-shadow: 0 0 30px rgba(59, 130, 246, 0.3);
+            display: flex; align-items: center; justify-content: center;
+        }
+        #mine-btn:active { transform: scale(0.95); }
+
+        /* Магазин */
+        .upgrade-card { background: #1e293b; width: 90%; padding: 20px; border-radius: 15px; border: 1px solid #334155; }
+        .btn-action { width: 100%; padding: 15px; border-radius: 12px; border: none; font-weight: bold; cursor: pointer; margin-top: 10px; color: white; }
+        .buy { background: #e11d48; font-size: 16px; }
+        .invite { background: #8b5cf6; margin-top: 20px; }
+
+        /* Нижнее меню */
+        .navbar { background: #1e293b; display: flex; justify-content: space-around; padding: 15px 0; border-top: 1px solid #334155; }
+        .nav-item { color: #94a3b8; cursor: pointer; font-size: 14px; font-weight: bold; }
+        .nav-item.active-nav { color: #3b82f6; }
+
+        .energy-bar { width: 80%; height: 8px; background: #334155; border-radius: 4px; margin-top: 15px; overflow: hidden; }
+        #energy-fill { width: 100%; height: 100%; background: #f59e0b; transition: 0.3s; }
     </style>
 </head>
 <body>
 
-    <div class="stat-card">
+    <div class="header">
         <div>📜 <span id="bps">0</span></div>
         <div>🔋 <span id="en-txt">100/100</span></div>
     </div>
-    <div class="energy-bar"><div id="energy-fill"></div></div>
 
-    <div id="mine-btn">⚡</div>
+    <div id="game-tab" class="tab-content active">
+        <div id="mine-btn">⚡</div>
+        <div class="energy-bar"><div id="energy-fill"></div></div>
+        <p style="color: #64748b; margin-top: 20px;">Кликай на молнию!</p>
+    </div>
 
-    <div class="upgrade-section">
-        <h3>🛠 МАГАЗИН</h3>
-        <p>Уровень инструментов: <span id="lv">1</span></p>
-        <button class="btn-action buy" id="buy-upgrade">УЛУЧШИТЬ (50 📜)</button>
+    <div id="shop-tab" class="tab-content">
+        <div class="upgrade-card">
+            <h2 style="margin-top: 0;">🛠 Мастерская</h2>
+            <p>Уровень инструментов: <b id="lv">1</b></p>
+            <p style="font-size: 13px; color: #94a3b8;">Каждый уровень снижает расход энергии</p>
+            <button class="btn-action buy" id="buy-upgrade">УЛУЧШИТЬ (50 📜)</button>
+        </div>
         
         <button class="btn-action invite" id="invite-btn">📢 ПРИГЛАСИТЬ ДРУГА</button>
+    </div>
+
+    <div class="navbar">
+        <div class="nav-item active-nav" onclick="showTab('game')">🏠 ИГРА</div>
+        <div class="nav-item" onclick="showTab('shop')">🛒 МАГАЗИН</div>
     </div>
 
     <script>
         const tg = window.Telegram.WebApp;
         tg.expand();
-        tg.MainButton.setText("СОХРАНИТЬ И ВЫЙТИ").setParams({color: "#22c55e"});
+        tg.MainButton.setText("СОХРАНИТЬ РЕЗУЛЬТАТ").setParams({color: "#22c55e"});
 
         let energy = 100;
         let blueprints = 0;
         let level = 1;
         let cost = 50;
 
-        // ВАЖНО: Получаем ID пользователя, чтобы создать ссылку
-        const userId = tg.initDataUnsafe.user ? tg.initDataUnsafe.user.id : 0;
-        const botUsername = "ТВОЙ_НИК_БОТА"; // ЗАМЕНИ НА НИК СВОЕГО БОТА (без @)
+        // Переключение вкладок
+        function showTab(tabName) {
+            document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
+            document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active-nav'));
+            
+            if (tabName === 'game') {
+                document.getElementById('game-tab').classList.add('active');
+                document.querySelectorAll('.nav-item').classList.add('active-nav');
+            } else {
+                document.getElementById('shop-tab').classList.add('active');
+                document.querySelectorAll('.nav-item').classList.add('active-nav');
+            }
+        }
 
-        const mineBtn = document.getElementById('mine-btn');
-        const buyBtn = document.getElementById('buy-upgrade');
-        const inviteBtn = document.getElementById('invite-btn');
-
-        mineBtn.onclick = () => {
+        // Логика клика
+        document.getElementById('mine-btn').onclick = () => {
             let consumption = 11 - level;
             if (energy >= consumption) {
                 energy -= consumption;
@@ -61,27 +105,27 @@
                 updateUI();
                 tg.HapticFeedback.impactOccurred('medium');
                 tg.MainButton.show();
-            } else { tg.showAlert("Нет энергии!"); }
+            } else { tg.showAlert("Энергия на нуле!"); }
         };
 
-        buyBtn.onclick = () => {
+        // Логика покупки
+        document.getElementById('buy-upgrade').onclick = () => {
             if (blueprints >= cost) {
                 blueprints -= cost;
                 level++;
                 cost *= 2;
-                buyBtn.innerText = `УЛУЧШИТЬ (${cost} 📜)`;
+                document.getElementById('buy-upgrade').innerText = `УЛУЧШИТЬ (${cost} 📜)`;
                 updateUI();
                 tg.sendData(JSON.stringify({action: "upgrade", new_level: level, cost: cost/2}));
-            } else { tg.showAlert("Недостаточно чертежей!"); }
+            } else { tg.showAlert("Мало чертежей!"); }
         };
 
-        // ЛОГИКА ПРИГЛАШЕНИЯ
-        inviteBtn.onclick = () => {
-            const refLink = `https://t.me/${botUsername}?start=${userId}`;
-            const shareText = "Заходи в мою Энергосеть и начни добывать чертежи вместе со мной!";
-            const fullUrl = `https://t.me/share/url?url=${encodeURIComponent(refLink)}&text=${encodeURIComponent(shareText)}`;
-            
-            tg.openTelegramLink(fullUrl); // Открывает окно выбора контакта в Telegram
+        // Приглашение
+        document.getElementById('invite-btn').onclick = () => {
+            const userId = tg.initDataUnsafe.user ? tg.initDataUnsafe.user.id : 0;
+            const refLink = `https://t.me/НИК_ТВОЕГО_БОТА?start=${userId}`; // ЗАМЕНИ НИК!
+            const fullUrl = `https://t.me/share/url?url=${encodeURIComponent(refLink)}&text=Стань энерго-магнатом!`;
+            tg.openTelegramLink(fullUrl);
         };
 
         function updateUI() {
