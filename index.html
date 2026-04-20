@@ -98,44 +98,48 @@
     <script>
         const tg = window.Telegram.WebApp;
         tg.expand();
-
+    
         let energy = 100;
         let blueprints = 0;
-
+    
         const btn = document.getElementById('mine-button');
         const eFill = document.getElementById('energy-fill');
         const eText = document.getElementById('energy-text');
         const bText = document.getElementById('blueprints-val');
-
+    
+        // Настраиваем главную кнопку Telegram (внизу окна)
+        tg.MainButton.setText("СОХРАНИТЬ РЕЗУЛЬТАТ");
+        tg.MainButton.textColor = "#FFFFFF";
+        tg.MainButton.color = "#2ecc71";
+    
         btn.addEventListener('click', () => {
             if (energy >= 10) {
                 energy -= 10;
                 blueprints += 1;
-
-                // Обновляем визуал
+    
                 eText.innerText = `${energy}/100`;
                 eFill.style.width = `${energy}%`;
                 bText.innerText = blueprints;
-
-                // Вибрация
-                tg.HapticFeedback.impactOccurred('medium');
-
-                // Отправляем данные боту
-                const data = {
-                    action: "mine",
-                    blueprints_earned: 1,
-                    current_energy: energy
-                };
-
-                // Отправляем и закрываем через маленькую паузу
-                setTimeout(() => {
-                    tg.sendData(JSON.stringify(data));
-                    tg.close();
-                }, 150); 
+    
+                tg.HapticFeedback.impactOccurred('light');
+    
+                // Показываем кнопку сохранения, если накликали хотя бы 1 чертеж
+                if (blueprints > 0) {
+                    tg.MainButton.show();
+                }
             } else {
                 tg.showAlert("Энергия закончилась!");
             }
         });
+    
+        // Когда нажимаем на "СОХРАНИТЬ РЕЗУЛЬТАТ" внизу
+        tg.MainButton.onClick(() => {
+            const data = {
+                action: "mine",
+                blueprints_earned: blueprints,
+                current_energy: energy
+            };
+            tg.sendData(JSON.stringify(data));
+            tg.close();
+        });
     </script>
-</body>
-</html>
