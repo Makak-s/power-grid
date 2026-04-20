@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Энергосеть</title>
+    <title>Энергосеть: Кликер</title>
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <style>
         body {
@@ -31,7 +31,7 @@
             border-radius: 12px;
             border: 1px solid #334155;
             text-align: center;
-            min-width: 80px;
+            min-width: 90px;
         }
 
         .energy-bar {
@@ -47,7 +47,7 @@
             width: 100%;
             height: 100%;
             background: linear-gradient(90deg, #f59e0b, #fbbf24);
-            transition: width 0.3s;
+            transition: width 0.2s;
         }
 
         #mine-button {
@@ -74,6 +74,7 @@
             margin-top: 30px;
             color: #64748b;
             font-size: 14px;
+            text-align: center;
         }
     </style>
 </head>
@@ -81,65 +82,71 @@
 
     <div class="stats">
         <div class="stat-item">
-            <div style="font-size: 12px; color: #94a3b8;">📜 ЧЕРТЕЖИ</div>
-            <div id="blueprints-val" style="font-size: 20px; font-weight: bold;">0</div>
+            <div style="font-size: 11px; color: #94a3b8;">📜 ДОБЫТО</div>
+            <div id="blueprints-val" style="font-size: 22px; font-weight: bold;">0</div>
         </div>
         <div class="stat-item">
-            <div style="font-size: 12px; color: #94a3b8;">🔋 ЭНЕРГИЯ</div>
+            <div style="font-size: 11px; color: #94a3b8;">🔋 ЭНЕРГИЯ</div>
             <div id="energy-text" style="font-size: 14px;">100/100</div>
             <div class="energy-bar"><div id="energy-fill" class="energy-fill"></div></div>
         </div>
     </div>
 
-    <div id="mine-button">⚡ ДОБЫТЬ</div>
-    
-    <p class="hint">1 клик = 10 энергии</p>
+    <div id="mine-button">⚡</div>
+
+    <p class="hint">Кликай, чтобы собирать чертежи.<br>Затем нажми зеленую кнопку внизу!</p>
 
     <script>
         const tg = window.Telegram.WebApp;
         tg.expand();
-    
+
         let energy = 100;
-        let blueprints = 0;
-    
+        let blueprints_session = 0; // Сколько накоплено за этот заход
+
         const btn = document.getElementById('mine-button');
         const eFill = document.getElementById('energy-fill');
         const eText = document.getElementById('energy-text');
         const bText = document.getElementById('blueprints-val');
-    
-        // Настраиваем главную кнопку Telegram (внизу окна)
-        tg.MainButton.setText("СОХРАНИТЬ РЕЗУЛЬТАТ");
-        tg.MainButton.textColor = "#FFFFFF";
-        tg.MainButton.color = "#2ecc71";
-    
+
+        // Настраиваем главную кнопку Telegram (внизу экрана)
+        tg.MainButton.setText("СОХРАНИТЬ И ВЫЙТИ");
+        tg.MainButton.color = "#22c55e"; // Зеленый цвет
+        tg.MainButton.textColor = "#ffffff";
+
         btn.addEventListener('click', () => {
             if (energy >= 10) {
                 energy -= 10;
-                blueprints += 1;
-    
+                blueprints_session += 1;
+
+                // Обновляем текст и полоску на экране
                 eText.innerText = `${energy}/100`;
                 eFill.style.width = `${energy}%`;
-                bText.innerText = blueprints;
-    
-                tg.HapticFeedback.impactOccurred('light');
-    
-                // Показываем кнопку сохранения, если накликали хотя бы 1 чертеж
-                if (blueprints > 0) {
+                bText.innerText = blueprints_session;
+
+                // Легкая вибрация
+                tg.HapticFeedback.impactOccurred('medium');
+
+                // Показываем кнопку сохранения внизу, как только появился хоть один чертеж
+                if (blueprints_session > 0) {
                     tg.MainButton.show();
                 }
             } else {
-                tg.showAlert("Энергия закончилась!");
+                tg.showAlert("Энергия закончилась! Сохрани результат и подожди восстановления.");
             }
         });
-    
-        // Когда нажимаем на "СОХРАНИТЬ РЕЗУЛЬТАТ" внизу
+
+        // Когда игрок нажимает на зеленую кнопку внизу экрана
         tg.MainButton.onClick(() => {
             const data = {
                 action: "mine",
-                blueprints_earned: blueprints,
+                blueprints_earned: blueprints_session,
                 current_energy: energy
             };
+
+            // Вот теперь мы один раз отправляем данные и закрываемся
             tg.sendData(JSON.stringify(data));
             tg.close();
         });
     </script>
+</body>
+</html>
